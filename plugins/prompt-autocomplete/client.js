@@ -16,9 +16,8 @@ window.__ModuleLoader__.load({
       .dsh-pa {
         position: absolute;
         z-index: 6;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
         pointer-events: none;
         color: var(--dsw-alias-label-caption);
         opacity: 0.82;
@@ -99,16 +98,19 @@ window.__ModuleLoader__.load({
     }
 
     function boxOf(el, card, editor, rect) {
-      const cardRect = card.getBoundingClientRect()
       const base = (el?.offsetParent ?? card).getBoundingClientRect()
       const style = getComputedStyle(editor)
-      const left = rect.left - base.left
-      const width = cardRect.right - 8 - rect.left
+      const edRect = editor.getBoundingClientRect()
+      const padLeft = Number.parseFloat(style.paddingLeft) || 0
+      const padRight = Number.parseFloat(style.paddingRight) || 0
+      const contentLeft = edRect.left + padLeft
+      const width = Math.max(0, edRect.width - padLeft - padRight)
       if (width < 48) return null
       return {
-        left,
+        left: contentLeft - base.left,
         top: rect.top - base.top,
         width,
+        indent: Math.max(0, Math.min(width, rect.left - contentLeft)),
         fontFamily: style.fontFamily,
         fontSize: style.fontSize,
         fontWeight: style.fontWeight,
@@ -157,6 +159,8 @@ window.__ModuleLoader__.load({
       }, [sessionId])
 
       const trace = React.useCallback((event, extra) => {
+        // Normal events stay behind ?padebug=1; failures always report.
+        if (!DEBUG && event !== 'reject') return
         try {
           void fetch('/api/prompt-autocomplete/trace', {
             method: 'POST',
@@ -310,7 +314,7 @@ window.__ModuleLoader__.load({
             const infoNow = caretInfo(editorNow)
             if (infoNow === null) return
             const rect = el.getBoundingClientRect()
-            const dx = infoNow.rect.left - rect.left
+            const dx = 0
             // Align glyph boxes, not line boxes: half-leading differs between
             // the editor's line and an absolutely positioned ghost line.
             let dy = infoNow.rect.top - rect.top
@@ -514,6 +518,7 @@ window.__ModuleLoader__.load({
           left: `${box.left}px`,
           top: `${box.top}px`,
           width: `${box.width}px`,
+          textIndent: `${box.indent}px`,
           fontFamily: box.fontFamily,
           fontSize: box.fontSize,
           fontWeight: box.fontWeight,

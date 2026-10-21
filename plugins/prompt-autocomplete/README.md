@@ -35,7 +35,7 @@ draftRef.current = text          // 变了才重新排 120ms 防抖
 - **这是绕过不是修复**：`useInput` 恒为空的原因没有查清（多实例 / 旧 store 绑定是嫌疑），只保证"能读到"。
 - **重复实例**：多次热更新后仍可能出现僵尸实例，需要强刷或重启；新实现不再依赖订阅，受影响更小但没根治。
 - **内容质量**：草稿只有 2–4 字时，模型容易复述上下文或提出下一个需求；20 字以内的续写更稳。
-- **调试代码在线**：当前版本客户端 trace 默认开启，会把事件写进 `/tmp/pa-debug.log`（临时，后续收回 `?padebug=1`）。
+- **调试输出**：客户端 trace 默认关闭，只有 `?padebug=1` 或请求异常（`reject`）时才写 `/tmp/pa-debug.log`。
 
 ## 安装
 
@@ -75,22 +75,23 @@ github:144guanguan/dsh-plugins#path:/plugins/prompt-autocomplete
 - **Host**（`index.js`）：`/api/prompt-autocomplete/complete`，登录态校验的精确路由，SSE 流式返回
   `{"type":"text"}` 帧和最后一帧 `{"type":"done"}`。用会话当前的 provider/model，最低推理档（`off`），
   `maxTokens` 64。结果按 `sessionId + seq + draft` 缓存在进程内，同一前缀不重复请求。
-  另有一个临时 `/api/prompt-autocomplete/trace` 路由，接收客户端诊断事件并写 `/tmp/pa-debug.log`。
+  另有 `/api/prompt-autocomplete/trace` 路由，接收 `?padebug=1` 下的客户端诊断事件并写 `/tmp/pa-debug.log`。
 - **Client**（`client.js`）：注册到 `conversation.input.overlay`。每 120ms 轮询编辑器文本，变化后排一次
   120ms 防抖请求；用 Selection 的 Range 量光标位置，取光标前一个字的**字形盒**与灰字文本的 Range rect
   对齐（行盒含 half-leading，直接用行盒会偏下），偏移量校准一次后复用到这一条的每一帧。
+  灰字铺满编辑器整列宽度，用 `text-indent` 把第一行缩进到光标处，因此换行后的行回到左边缘。
   接受时用 `inputActions.captureInsertion()` + `insertText()`；是否过期按**草稿文本**比较，
   避免输入法的瞬时修订号变化把有效结果误判为过期。
 
 ## 调试
 
-- 页面加 `?padebug=1`：console 打印每次续写的状态（trace 目前默认开启，未按该开关收口）。
+- 页面加 `?padebug=1`：console 与 `/tmp/pa-debug.log` 记录 `schedule / attempt / skip / done / calibrate`；不开时只有异常会被记录。
 - 宿主诊断写 `/tmp/pa-debug.log`：`schedule / attempt / skip / http / done / calibrate` 事件。
   其中 `calibrate` 会给出 `dx/dy` 和光标/灰字的实际坐标，定位偏移时看这一行。
 
 ## 已知限制
 
-- 灰字只渲染单行；跨行续写会截断。
+- 灰字自动换行，但它是绝对定位的浮层：续写很长时会盖到输入卡片下方（不会把卡片撑高）。
 - 每次停顿都会发一次请求，属于「用成本换即时感」；没有全局频率限制。
 - `@` 引用解析的是草稿里的文本路径；引用 chip 如果只保留文件名、没有相对路径，读文件会跳过。
 - 光标定位依赖 DOM Selection，个别浏览器/输入法下 caret rect 可能退化成整块编辑器位置。
