@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Next Prompt",
+    "description": "Predicts your next message after each turn. Press Tab to turn it into an editable draft."
+  }
+}

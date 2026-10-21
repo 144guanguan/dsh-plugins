@@ -1,0 +1,47 @@
+{
+  "name": "dsh-next-prompt",
+  "version": "0.1.0",
+  "description": "Predicts your next message after each turn and paints it as ghost text in the composer; press Tab to turn it into an editable draft.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "prompt-suggestion",
+    "ghost-text"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/144guanguan/dsh-plugins.git",
+    "directory": "plugins/next-prompt"
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  }
+}
