@@ -1,0 +1,3 @@
+- insert:
+    - id: prompt-autocomplete
+      name: dsh-prompt-autocomplete

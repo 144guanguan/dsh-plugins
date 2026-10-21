@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Prompt Autocomplete",
+    "description": "Continues the message you are typing as inline ghost text. Press Tab to accept."
+  }
+}
