@@ -9,3 +9,5 @@ importers:
   .: {}
 
   plugins/next-prompt: {}
+
+  plugins/prompt-autocomplete: {}

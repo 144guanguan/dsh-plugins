@@ -124,21 +124,16 @@ window.__ModuleLoader__.load({
 
     function PromptAutocomplete(props) {
       const { inputActions, sessionId } = props
-      const useInput = props.useInput
       const useSession = props.useSession
 
-      const draft = useInput((state) => state.draft)
-      const draftRev = useInput((state) => state.draftRev)
       const running = useSession((state) => state.running)
 
       const [ghost, setGhost] = React.useState(null)
       const [box, setBox] = React.useState(null)
       const ghostRef = React.useRef(null)
 
-      const draftRef = React.useRef(draft)
-      draftRef.current = draft
-      const draftRevRef = React.useRef(draftRev)
-      draftRevRef.current = draftRev
+      // Draft text comes from the editor DOM, not the input store.
+      const draftRef = React.useRef('')
       const runningRef = React.useRef(running)
       runningRef.current = running
       const sessionRef = React.useRef(sessionId)
@@ -161,16 +156,7 @@ window.__ModuleLoader__.load({
         abortRef.current = null
       }, [sessionId])
 
-      React.useEffect(() => {
-        lastDraftAtRef.current = Date.now()
-        // Detach instead of aborting: an IME can touch the draft mid-request,
-        // and the revision guard already discards a stale answer.
-        abortRef.current = null
-        setGhost(null)
-      }, [draft])
-
       const trace = React.useCallback((event, extra) => {
-        if (!DEBUG) return
         try {
           void fetch('/api/prompt-autocomplete/trace', {
             method: 'POST',
@@ -364,22 +350,48 @@ window.__ModuleLoader__.load({
         }
       }, [ghost])
 
-      // One request per typing pause; every keystroke cancels the pending one.
+      // One request per typing pause. The draft is polled from the editor DOM
+      // because the input-store subscription can go stale after client reloads.
       React.useEffect(() => {
-        if (skipNextRef.current) {
-          skipNextRef.current = false
-          trace('skip', { why: 'post-accept', len: draft.trim().length })
-          return undefined
+        let timer = null
+        let disposed = false
+        const schedule = () => {
+          if (timer !== null) clearTimeout(timer)
+          timer = setTimeout(() => {
+            timer = null
+            if (disposed) return
+            trace('fire', { len: draftRef.current.length })
+            request('pause').catch((error) => trace('reject', { m: String(error?.message ?? error) }))
+          }, PAUSE_MS)
         }
-        if (running) return undefined
-        if (draft.trim().length < MIN_DRAFT) return undefined
-        trace('schedule', { len: draft.trim().length })
-        const timer = setTimeout(() => {
-          trace('fire', { len: draftRef.current.length })
-          request('pause').catch((error) => trace('reject', { m: String(error?.message ?? error) }))
-        }, PAUSE_MS)
-        return () => clearTimeout(timer)
-      }, [draft, running, request, trace])
+        const tick = () => {
+          if (disposed) return
+          const editor = editorOf(composerCard())
+          if (editor === null) return
+          const text = editor.textContent ?? ''
+          if (text === draftRef.current) return
+          draftRef.current = text
+          lastDraftAtRef.current = Date.now()
+          abortRef.current = null
+          setGhost(null)
+          if (skipNextRef.current) {
+            skipNextRef.current = false
+            trace('skip', { why: 'post-accept', len: text.trim().length })
+            return
+          }
+          if (runningRef.current) return
+          if (text.trim().length < MIN_DRAFT) return
+          trace('schedule', { len: text.trim().length })
+          schedule()
+        }
+        const interval = setInterval(tick, 120)
+        tick()
+        return () => {
+          disposed = true
+          clearInterval(interval)
+          if (timer !== null) clearTimeout(timer)
+        }
+      }, [request, trace])
 
       // Safety net: if a debounce timer is lost (throttling, remount), a draft
       // that has been untouched for a while still gets one prediction.

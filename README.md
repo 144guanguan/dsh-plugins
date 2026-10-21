@@ -7,7 +7,7 @@
 | 插件 | 一句话 | 安装 spec |
 | --- | --- | --- |
 | [Next Prompt](plugins/next-prompt/) | 每轮回答结束后预测你的下一句，灰字出现在输入框里，`Tab` 采纳 | `github:144guanguan/dsh-plugins#path:/plugins/next-prompt` |
-| ⚠️ [Prompt Autocomplete](plugins/prompt-autocomplete/)（实验性） | 你打字时把这句话的后半截接在光标后，读对话 / 工作区 / `@` 文件，`Tab` 接受 | `github:144guanguan/dsh-plugins#path:/plugins/prompt-autocomplete` |
+| ⚠️ [Prompt Autocomplete](plugins/prompt-autocomplete/)（可用，但依赖 composer DOM） | 你打字时把这句话的后半截接在光标后，读对话 / 工作区 / `@` 文件，`Tab` 接受 | `github:144guanguan/dsh-plugins#path:/plugins/prompt-autocomplete` |
 
 ## 一键安装
 
